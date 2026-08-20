@@ -80,11 +80,9 @@ def build(scene: Any, params: Params, duration: float, timeline: Any = None) -> 
     shells: list[Any] = []
     boxes: list[Any] = []
     for i, node in enumerate(inner):
-        unit, box = _shell(
-            scene, node, palette.cycle(i),
-            reserve=reserve if i == 0 else 0.0,
-            max_width=slot,
-        )
+        # Every sibling reserves the same room even if only the first one uses
+        # it — a row of boxes at three different heights reads as a mistake.
+        unit, box = _shell(scene, node, palette.cycle(i), reserve=reserve, max_width=slot)
         shells.append(unit)
         boxes.append(box)
 

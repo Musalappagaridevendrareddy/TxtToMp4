@@ -5,8 +5,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import type { Pool } from 'pg';
 
-import { createPool } from './db.js';
-
 /** True when this module is the process entry point (`node dist/migrate.js`). */
 export function isMainModule(moduleUrl: string, argv1 = process.argv[1]): boolean {
   return argv1 !== undefined && moduleUrl === pathToFileURL(argv1).href;
@@ -96,7 +94,12 @@ export async function migrate(
 }
 
 if (isMainModule(import.meta.url)) {
-  const { getConfig } = await import('./config.js');
+  // Imported here rather than at the top so that merely importing this module
+  // (for `isMainModule` or `migrate`) does not pull in pg or read the env.
+  const [{ getConfig }, { createPool }] = await Promise.all([
+    import('./config.js'),
+    import('./db.js'),
+  ]);
   const config = getConfig();
   const pool = createPool(config.databaseUrl);
   try {

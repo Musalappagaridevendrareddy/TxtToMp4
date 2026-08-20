@@ -516,25 +516,86 @@ export async function emitValidSpec(
 
 /**
  * `@explainer/planner` and `@explainer/compositor` are loaded at call time
- * rather than imported at the top so that this module — and its tests — do not
- * need either package built.
+ * rather than imported at the top, so this module — and its tests — do not need
+ * either package built, and the API server process never pulls in Remotion or
+ * the Anthropic SDK just to serve a status request.
+ *
+ * The `Planner` and `Compositor` interfaces above are ports; the sibling
+ * packages have their own natural signatures and these functions are the plugs.
+ * Keep the translation here rather than bending either side to the other.
  */
+
+interface PlannerModule {
+  plan(question: string, options?: unknown): Promise<string>;
+  emitSpec(
+    question: string,
+    planText: string,
+    options?: { maxAttempts?: number },
+  ): Promise<{ spec: TypedVideoSpec; attempts: number; repairs: string[][] }>;
+  critique(
+    spec: TypedVideoSpec,
+    keyframePaths: string[],
+    options?: unknown,
+  ): Promise<
+    | { verdict: 'ship'; note: string; spec: TypedVideoSpec }
+    | { verdict: 'revise'; spec: TypedVideoSpec; notes: string }
+  >;
+}
+
 export async function loadPlanner(): Promise<Planner> {
-  const mod = (await import('@explainer/planner' as string)) as unknown as Planner;
+  const mod = (await import('@explainer/planner' as string)) as unknown as PlannerModule;
   for (const fn of ['plan', 'emitSpec', 'critique'] as const) {
     if (typeof mod[fn] !== 'function') {
       throw new Error(`@explainer/planner does not export ${fn}()`);
     }
   }
-  return { plan: mod.plan, emitSpec: mod.emitSpec, critique: mod.critique };
+
+  return {
+    plan: ({ question }) => mod.plan(question),
+
+    // The planner owns its own repair loop, and it is the better one: it keeps
+    // the rejected attempt in the transcript and hands the model the
+    // validator's own words. Let it run that loop; the worker's outer retry
+    // (maxSpecAttempts) then sits at 1 by default — see config.
+    emitSpec: async ({ question, plan }) => (await mod.emitSpec(question, plan)).spec,
+
+    critique: async ({ spec, keyframePaths }) => {
+      const outcome = await mod.critique(spec, keyframePaths);
+      return outcome.verdict === 'ship'
+        ? { approved: true, notes: [outcome.note] }
+        : { approved: false, notes: [outcome.notes], revisedSpec: outcome.spec };
+    },
+  };
+}
+
+interface CompositorModule {
+  renderExplainer(input: {
+    specPath: string;
+    timelinePath: string;
+    beatsDir: string;
+    audioPath: string;
+    outPath: string;
+  }): Promise<{ outPath: string; durationInFrames: number; fps: number }>;
 }
 
 export async function loadCompositor(): Promise<Compositor> {
-  const mod = (await import('@explainer/compositor' as string)) as unknown as Compositor;
+  const mod = (await import('@explainer/compositor' as string)) as unknown as CompositorModule;
   if (typeof mod.renderExplainer !== 'function') {
     throw new Error('@explainer/compositor does not export renderExplainer()');
   }
-  return { renderExplainer: mod.renderExplainer };
+
+  return {
+    renderExplainer: async ({ specPath, timelinePath, assetsDir, outPath }) => {
+      const result = await mod.renderExplainer({
+        specPath,
+        timelinePath,
+        beatsDir: join(assetsDir, 'beats'),
+        audioPath: join(assetsDir, 'narration.wav'),
+        outPath,
+      });
+      return result.outPath;
+    },
+  };
 }
 
 /* ------------------------------------------------------------------ *

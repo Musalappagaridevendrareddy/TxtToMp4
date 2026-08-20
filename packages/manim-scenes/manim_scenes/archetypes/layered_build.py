@@ -16,7 +16,7 @@ from typing import Any
 
 from .._manim import DOWN, LEFT, UP, FadeIn, Line, Text, VGroup
 from ..base import Fields, Node, ParamsModel, nth_phrase
-from ..theme import FONT_BODY, GAP, GAP_TIGHT, SAFE_HEIGHT, SAFE_WIDTH, STROKE, STROKE_THIN
+from ..theme import FONT_BODY, GAP, GAP_TIGHT, SAFE_HEIGHT, SAFE_WIDTH, STROKE_THIN
 
 ARCHETYPE = "layered_build"
 

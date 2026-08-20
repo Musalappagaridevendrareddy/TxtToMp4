@@ -17,3 +17,9 @@ renders/
 .DS_Store
 coverage/
 .remotion/
+
+# stray tsc output next to sources
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+!scripts/*.mjs
+packages/*/src/**/*.js.map

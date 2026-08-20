@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .._manim import DOWN, LEFT, RIGHT, Create, FadeIn, VGroup
+from .._manim import DOWN, RIGHT, Create, FadeIn, VGroup
 from ..base import Fields, Node, ParamsModel, nth_phrase
 from ..theme import GAP, GAP_WIDE, SAFE_WIDTH
 

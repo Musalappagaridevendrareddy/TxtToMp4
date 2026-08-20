@@ -10,16 +10,15 @@ importable (and testable) on a machine that has never heard of Cairo.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
-from typing import Callable
 
 __all__ = [
     "Palette", "PALETTES", "PALETTE_NAMES", "get_palette",
     "FONT_TITLE", "FONT_BODY",
     "EASE_IN", "EASE_OUT",
     "ASPECT_RATIO", "PIXEL_WIDTH", "PIXEL_HEIGHT", "FPS",
-    "FRAME_WIDTH", "FRAME_HEIGHT", "MARGIN", "SAFE_WIDTH", "SAFE_HEIGHT",
+    "FRAME_WIDTH", "FRAME_HEIGHT", "MARGIN", "BOTTOM_MARGIN", "CAPTION_ZONE",
+    "SAFE_WIDTH", "SAFE_HEIGHT", "SAFE_CENTER_Y",
     "GAP_TIGHT", "GAP", "GAP_WIDE",
     "CORNER_RADIUS", "STROKE_THIN", "STROKE", "STROKE_THICK",
     "CARD_PAD_X", "CARD_PAD_Y", "FILL_OPACITY",
@@ -92,8 +91,6 @@ PALETTES: dict[str, Palette] = {
 
 PALETTE_NAMES: tuple[str, ...] = tuple(PALETTES)
 
-_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
-
 
 def get_palette(name: str) -> Palette:
     """Look up a palette by the name the spec chose.
@@ -158,11 +155,23 @@ FPS = 30
 FRAME_HEIGHT = 8.0
 FRAME_WIDTH = FRAME_HEIGHT * ASPECT_RATIO  # 14.2222…
 
-# Nothing is allowed inside this band. It is where captions, the lower third and
-# the compositor's letterboxing live.
+# Nothing is allowed inside this band. It is where the compositor's framing lives.
 MARGIN = 0.6
+
+# The bottom is not symmetric with the rest: Remotion lays word-level captions
+# across the bottom 18% of the frame (theme.ts LAYOUT.captionZoneRatio). Anything
+# Manim draws down there ends up behind the caption plate, so the safe area stops
+# short of it. 0.18 * FRAME_HEIGHT = 1.44 scene units.
+CAPTION_ZONE = 0.18 * FRAME_HEIGHT  # 1.44
+BOTTOM_MARGIN = CAPTION_ZONE
+
 SAFE_WIDTH = FRAME_WIDTH - 2 * MARGIN
-SAFE_HEIGHT = FRAME_HEIGHT - 2 * MARGIN
+SAFE_HEIGHT = FRAME_HEIGHT - MARGIN - BOTTOM_MARGIN
+
+# Because the top and bottom margins differ, the middle of the safe area is not
+# the middle of the frame. Archetypes that centre their content vertically must
+# shift it up by this much, or they drift into the caption band.
+SAFE_CENTER_Y = (BOTTOM_MARGIN - MARGIN) / 2  # 0.42
 
 
 # ------------------------------------------------------------------- structure
@@ -183,8 +192,3 @@ FILL_OPACITY = 0.10  # cards are tinted glass, not solid blocks
 # The hard ceiling on simultaneous on-screen elements. Mirrors MAX_ELEMENTS in
 # packages/spec/src/archetypes.ts — if one moves, both move.
 MAX_ELEMENTS = 5
-
-
-def easing_name(fn: Callable[[float], float]) -> str:
-    """Human name for one of the two sanctioned easings (used in error text)."""
-    return "EASE_IN" if fn is EASE_IN else "EASE_OUT" if fn is EASE_OUT else "custom"

@@ -66,7 +66,10 @@ const EnvSchema = z.object({
   PYTHON_ROOT: z.string().min(1).default('./packages'),
   FFMPEG_BIN: z.string().min(1).default('ffmpeg'),
   MAX_CRITIQUE_ITERATIONS: z.coerce.number().int().min(0).max(10).default(3),
-  MAX_SPEC_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+  // The planner runs its own repair loop (three attempts, feeding the
+  // validator's messages back into the transcript), so this outer retry
+  // defaults to 1. Raising it multiplies the two loops together.
+  MAX_SPEC_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(1),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(1),
   NARRATION_TIMEOUT_MS: z.coerce.number().int().positive().default(10 * MINUTE),
   MANIM_TIMEOUT_MS: z.coerce.number().int().positive().default(30 * MINUTE),

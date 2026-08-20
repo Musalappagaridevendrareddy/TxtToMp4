@@ -19,7 +19,7 @@ timing, budgeting and validation logic is unit-testable headlessly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Callable, Sequence
 
 from . import theme
 from ._manim import (
@@ -28,9 +28,10 @@ from ._manim import (
     RoundedRectangle, Text, VGroup,
 )
 from .theme import (
-    CARD_PAD_X, CARD_PAD_Y, CORNER_RADIUS, EASE_IN, EASE_OUT, FILL_OPACITY,
-    FONT_BODY, FRAME_HEIGHT, FRAME_WIDTH, GAP_TIGHT, MARGIN, MAX_ELEMENTS,
-    SAFE_HEIGHT, SAFE_WIDTH, STROKE, STROKE_THIN, Palette, get_palette,
+    BOTTOM_MARGIN, CARD_PAD_X, CARD_PAD_Y, CORNER_RADIUS, EASE_IN, EASE_OUT,
+    FILL_OPACITY, FONT_BODY, FRAME_HEIGHT, FRAME_WIDTH, GAP_TIGHT, MARGIN,
+    MAX_ELEMENTS, SAFE_CENTER_Y, SAFE_HEIGHT, SAFE_WIDTH, STROKE, STROKE_THIN,
+    Palette, get_palette,
 )
 
 __all__ = [
@@ -92,11 +93,6 @@ class ParamsModel:
     shelled out to from Node, and every dependency is a thing that can fail to
     install on a render box at 3am. Validation lives in ``Fields``.
     """
-
-    def as_dict(self) -> dict[str, Any]:
-        from dataclasses import asdict
-
-        return asdict(self)
 
 
 # Mirrors the Zod string caps in archetypes.ts. Long strings wreck layout.
@@ -320,6 +316,8 @@ class BaseArchetype:
         self._hold: float = MIN_HOLD
         self._duration: float | None = None
         self._events_left: int = 0
+        #: Shortest beat this archetype can be honestly played in, set by begin().
+        self.required_seconds: float = 0.0
         self.events: list[Event] = []
 
     # -- budget --------------------------------------------------------
@@ -334,6 +332,10 @@ class BaseArchetype:
         self._events_left = max(1, int(events))
         if hold is not None:
             self.set_hold(hold)
+        # Rule 2 has a price: n reveals cost at least n holds. A beat shorter
+        # than this cannot be honoured and the animation will overrun it — the
+        # compositor needs the number, so publish it rather than clip a hold.
+        self.required_seconds = self._events_left * (self._hold + MIN_RUN_TIME)
 
     def set_hold(self, seconds: float) -> None:
         """Rule 2 is a floor. A beat may raise it; nothing may lower it.
@@ -493,9 +495,6 @@ class BaseArchetype:
                   visible_after=len(self._visible))
         )
 
-    def retire_all(self, *, keep: Iterable[Any] = ()) -> None:
-        keep_set = list(keep)
-        self.retire(*[m for m in list(self._visible) if m not in keep_set])
 
     def pad_to(self, duration: float) -> None:
         """Sit on the final frame until the beat's audio is done.
@@ -545,9 +544,14 @@ class BaseArchetype:
 
     # -- frame safety --------------------------------------------------
     def assert_in_frame(self, mobject: Any) -> None:
-        """Raise unless the mobject sits inside the frame minus the margin."""
+        """Raise unless the mobject sits inside the safe area.
+
+        The bottom bound is higher than the others because the compositor puts
+        word-level captions there; see theme.BOTTOM_MARGIN.
+        """
         half_w = FRAME_WIDTH / 2 - MARGIN
-        half_h = FRAME_HEIGHT / 2 - MARGIN
+        top_bound = FRAME_HEIGHT / 2 - MARGIN
+        bottom_bound = -FRAME_HEIGHT / 2 + BOTTOM_MARGIN
         left, right = mobject.get_left()[0], mobject.get_right()[0]
         bottom, top = mobject.get_bottom()[1], mobject.get_top()[1]
         tol = 1e-3
@@ -556,10 +560,10 @@ class BaseArchetype:
             overflow.append(f"left by {(-half_w - left):.2f}")
         if right > half_w + tol:
             overflow.append(f"right by {(right - half_w):.2f}")
-        if bottom < -half_h - tol:
-            overflow.append(f"bottom by {(-half_h - bottom):.2f}")
-        if top > half_h + tol:
-            overflow.append(f"top by {(top - half_h):.2f}")
+        if bottom < bottom_bound - tol:
+            overflow.append(f"into the caption band by {(bottom_bound - bottom):.2f}")
+        if top > top_bound + tol:
+            overflow.append(f"top by {(top - top_bound):.2f}")
         if overflow:
             raise LayoutError(
                 f"{self.archetype}: {_describe(mobject)!r} escapes the safe frame "
@@ -683,40 +687,6 @@ class BaseArchetype:
                 lines[-1] = f"{lines[-1]} {word}"
         return "\n".join(lines)
 
-    def title(self, text: str, *, color: str | None = None) -> Any:
-        """A single line of display type, already fitted to the safe width."""
-        mob = Text(text, font_size=theme.FONT_TITLE, color=color or self.palette.accent)
-        self.fit(mob, max_width=SAFE_WIDTH)
-        return mob
-
-    def caption(self, text: str, *, color: str | None = None) -> Any:
-        mob = Text(text, font_size=FONT_BODY, color=color or self.palette.muted)
-        self.fit(mob, max_width=SAFE_WIDTH)
-        return mob
-
-    def stage(
-        self,
-        composition: Any,
-        *,
-        width_frac: float = 0.86,
-        height_frac: float = 0.78,
-        max_scale: float = 1.5,
-    ) -> Any:
-        """Scale a finished composition to fill the frame, then centre it.
-
-        Called once, after everything is placed and before anything is revealed.
-        Scaling the whole shot uniformly is the only resizing that preserves the
-        design; per-element fudging is how layouts end up looking assembled.
-        Capped at ``max_scale`` so a two-word beat does not become a billboard.
-        """
-        target_w = SAFE_WIDTH * width_frac
-        target_h = SAFE_HEIGHT * height_frac
-        factor = min(target_w / composition.width, target_h / composition.height)
-        factor = min(factor, max_scale)
-        if abs(factor - 1.0) > 1e-3:
-            composition.scale(factor)
-        composition.move_to(ORIGIN)
-        return composition
 
     @staticmethod
     def fit(mobject: Any, *, max_width: float = SAFE_WIDTH, max_height: float = SAFE_HEIGHT) -> Any:

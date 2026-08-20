@@ -87,9 +87,8 @@ def build_beat(scene: Any, beat_dict: dict, timeline_for_beat: Any = None) -> No
         if measured:
             duration = float(measured)
 
-    # Rule 2 is a floor the beat may raise, never lower.
-    hold = max(MIN_HOLD, float(beat_dict.get("holdAfterSeconds") or 0.0))
+    # Rule 2 is a floor the beat may raise, never lower. Set it before build()
+    # so the archetype's own begin() inherits it.
     scene.archetype = name
-    scene.begin(duration, events=1, hold=hold)  # replaced by the archetype's own begin()
-    scene._hold = hold
+    scene.set_hold(max(MIN_HOLD, float(beat_dict.get("holdAfterSeconds") or 0.0)))
     module.build(scene, params, duration, timeline_for_beat)

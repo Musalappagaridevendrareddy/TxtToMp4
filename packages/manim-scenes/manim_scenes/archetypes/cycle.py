@@ -16,7 +16,7 @@ from typing import Any
 
 from .._manim import RIGHT, UP, Create, CurvedArrow, FadeIn, Text, VGroup
 from ..base import Fields, Node, ParamsModel, nth_phrase
-from ..theme import FONT_BODY, GAP_TIGHT, SAFE_HEIGHT, SAFE_WIDTH, STROKE
+from ..theme import FONT_BODY, SAFE_HEIGHT, SAFE_WIDTH, STROKE
 
 ARCHETYPE = "cycle"
 

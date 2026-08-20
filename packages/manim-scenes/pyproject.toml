@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "explainer-manim-scenes"
+version = "0.1.0"
+description = "The twelve animation archetypes an explainer video is made of, as Manim scenes."
+requires-python = ">=3.10"
+license = { text = "UNLICENSED" }
+dependencies = ["manim>=0.18"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+render-beat = "manim_scenes.render_beat:main"
+
+[tool.setuptools]
+packages = ["manim_scenes", "manim_scenes.archetypes"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The whole suite runs without manim installed; that is the point of _manim.py.
+addopts = "-q"

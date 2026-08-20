@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.node.json",
-  "include": [
-    "src/lib/**/*.ts",
-    "src/theme.ts",
-    "src/keyframes.ts",
-    "src/__tests__/**/*.ts"
-  ]
-}
