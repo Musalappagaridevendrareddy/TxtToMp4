@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "explainer-ingest"
+version = "0.1.0"
+description = "Turn an uploaded document or photo into text the planner can use as a source"
+requires-python = ">=3.10"
+license = { text = "UNLICENSED" }
+# Deliberately EMPTY, matching packages/narration: the base install must work
+# on a machine with no OCR stack at all. Every engine lives behind an extra and
+# is imported lazily, so `pip install -e packages/ingest` never pulls a model.
+dependencies = []
+
+[project.optional-dependencies]
+# Tier 0. Text already inside the PDF — no model, no GPU, perfect fidelity.
+# This covers most real documents; OCR is the fallback, not the default path.
+pdf = ["pypdf>=4.2"]
+# Rasterises PDF pages so a scan can reach an OCR engine.
+raster = ["pypdfium2>=4.30", "pillow>=10.0"]
+# Tier 1a. Apache-2.0, ONNXRuntime, CPU-only — runs on aarch64 with no CUDA.
+rapidocr = ["rapidocr-onnxruntime>=1.3", "pillow>=10.0"]
+# Tier 1b. Apache-2.0. Needs the `tesseract` binary on PATH.
+tesseract = ["pytesseract>=0.3.10", "pillow>=10.0"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+explainer-ingest = "ingest.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ingest*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
