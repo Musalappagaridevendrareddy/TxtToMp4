@@ -36,7 +36,7 @@ test('a missing variable produces a ConfigError listing it by name', () => {
     () => loadConfig(withoutKey),
     (error: unknown) => {
       assert.ok(error instanceof ConfigError, 'expected a ConfigError');
-      assert.deepEqual(error.issues, ['ANTHROPIC_API_KEY is missing']);
+      assert.deepEqual(error.issues, ['ANTHROPIC_API_KEY is missing (required unless LLM_PROVIDER=openai-compat, which runs the decision stages on a local model)']);
       assert.match(error.message, /ANTHROPIC_API_KEY is missing/);
       assert.match(error.message, /Copy \.env\.example/);
       return true;
@@ -50,7 +50,7 @@ test('every missing variable is listed at once, not one per run', () => {
     (error: unknown) => {
       assert.ok(error instanceof ConfigError);
       assert.deepEqual(error.issues, [
-        'ANTHROPIC_API_KEY is missing',
+        'ANTHROPIC_API_KEY is missing (required unless LLM_PROVIDER=openai-compat, which runs the decision stages on a local model)',
         'DATABASE_URL is missing',
         'REDIS_URL is missing',
         'S3_ACCESS_KEY is missing',
@@ -88,4 +88,46 @@ test('numeric variables are coerced and range-checked', () => {
   assert.equal(loadConfig({ ...complete, PORT: '3000' }).port, 3000);
   assert.throws(() => loadConfig({ ...complete, PORT: '70000' }), ConfigError);
   assert.throws(() => loadConfig({ ...complete, MAX_CRITIQUE_ITERATIONS: 'many' }), ConfigError);
+});
+
+test('a fully local setup needs no Anthropic key', () => {
+  const { ANTHROPIC_API_KEY: _unused, ...noKey } = complete;
+  const config = loadConfig({
+    ...noKey,
+    LLM_PROVIDER: 'openai-compat',
+    LLM_BASE_URL: 'http://localhost:11434/v1',
+  });
+
+  assert.equal(config.llm.provider, 'openai-compat');
+  assert.equal(config.llm.baseUrl, 'http://localhost:11434/v1');
+  assert.equal(config.anthropicApiKey, undefined);
+  // Defaults chosen for local models: salvage bare JSON, assume no vision.
+  assert.equal(config.llm.structuredOutput, 'auto');
+  assert.equal(config.llm.vision, false);
+});
+
+const { ANTHROPIC_API_KEY: _alsoUnused, ...noKeyForBaseUrlTest } = complete;
+
+test('the local provider requires a base URL instead of a key', () => {
+  assert.throws(
+    () =>
+      loadConfig({ ...noKeyForBaseUrlTest, LLM_PROVIDER: 'openai-compat' }),
+    (error: unknown) => {
+      assert.ok(error instanceof ConfigError);
+      assert.deepEqual(error.issues, [
+        'LLM_BASE_URL is missing (required when LLM_PROVIDER=openai-compat, e.g. http://localhost:11434/v1)',
+      ]);
+      return true;
+    },
+  );
+});
+
+test('LLM_VISION is coerced from the string env into a boolean', () => {
+  const on = loadConfig({
+    ...complete,
+    LLM_PROVIDER: 'openai-compat',
+    LLM_BASE_URL: 'http://localhost:8000/v1',
+    LLM_VISION: '1',
+  });
+  assert.equal(on.llm.vision, true);
 });

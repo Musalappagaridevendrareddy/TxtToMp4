@@ -1,4 +1,18 @@
-export { MODELS, PlannerError, defaultClient, type PlannerClient } from './client.js';
+export {
+  MODELS,
+  PlannerError,
+  configuredProvider,
+  defaultClient,
+  resetClientCache,
+  type LlmProvider,
+  type PlannerClient,
+} from './client.js';
+export {
+  createOpenAICompatClient,
+  salvageJsonObject,
+  type OpenAICompatOptions,
+  type StructuredOutputMode,
+} from './openai-compat.js';
 export { gate, type GateResult } from './gate.js';
 export { plan, type PlanOptions } from './plan.js';
 export {

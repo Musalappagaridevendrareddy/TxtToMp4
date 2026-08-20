@@ -27,8 +27,22 @@ const EnvSchema = z.object({
   HOST: z.string().min(1).default('0.0.0.0'),
   CORS_ORIGIN: z.string().min(1).default('*'),
 
-  // Claude API
-  ANTHROPIC_API_KEY: nonEmpty('your Anthropic API key'),
+  // Where the four decision stages run. `openai-compat` covers any local
+  // server speaking OpenAI's /chat/completions: Ollama, vLLM, llama.cpp,
+  // LM Studio, TGI.
+  LLM_PROVIDER: z.enum(['anthropic', 'openai-compat']).default('anthropic'),
+  LLM_BASE_URL: z.string().url('must be a URL, e.g. http://localhost:11434/v1').optional(),
+  LLM_API_KEY: z.string().min(1).optional(),
+  LLM_STRUCTURED_OUTPUT: z.enum(['tools', 'json_schema', 'auto']).default('auto'),
+  /** Declare the critique model vision-capable. Most local text models are not. */
+  LLM_VISION: z
+    .enum(['0', '1', 'true', 'false'])
+    .default('0')
+    .transform((v) => v === '1' || v === 'true'),
+
+  // Claude API. Required only when LLM_PROVIDER is `anthropic` — hence optional
+  // here, with the real requirement expressed as a refinement below.
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
   PLANNER_MODEL: z.string().min(1).default('claude-opus-5'),
   SPEC_MODEL: z.string().min(1).default('claude-opus-5'),
   CRITIQUE_MODEL: z.string().min(1).default('claude-sonnet-5'),
@@ -77,6 +91,33 @@ const EnvSchema = z.object({
   KEYFRAME_TIMEOUT_MS: z.coerce.number().int().positive().default(2 * MINUTE),
 });
 
+/**
+ * Cross-field rules the per-field schema cannot express: each provider needs
+ * its own credential, and neither is required when the other is selected.
+ * Running fully local must not demand an Anthropic key.
+ *
+ * Deliberately not a `superRefine`: zod skips refinements when the base parse
+ * already failed, so an empty `.env` would report the other six missing
+ * variables, then reveal this one only on the next run. Reading the raw
+ * environment keeps every problem in a single report.
+ */
+function crossFieldIssues(cleaned: Record<string, string>): string[] {
+  const provider = cleaned.LLM_PROVIDER ?? 'anthropic';
+  const issues: string[] = [];
+
+  if (provider === 'anthropic' && !cleaned.ANTHROPIC_API_KEY) {
+    issues.push(
+      'ANTHROPIC_API_KEY is missing (required unless LLM_PROVIDER=openai-compat, which runs the decision stages on a local model)',
+    );
+  }
+  if (provider === 'openai-compat' && !cleaned.LLM_BASE_URL) {
+    issues.push(
+      'LLM_BASE_URL is missing (required when LLM_PROVIDER=openai-compat, e.g. http://localhost:11434/v1)',
+    );
+  }
+  return issues;
+}
+
 export type Env = z.infer<typeof EnvSchema>;
 
 export interface Config {
@@ -85,7 +126,15 @@ export interface Config {
   readonly port: number;
   readonly host: string;
   readonly corsOrigin: string;
-  readonly anthropicApiKey: string;
+  /** Present only when `llm.provider` is `anthropic`. */
+  readonly anthropicApiKey?: string;
+  readonly llm: {
+    readonly provider: 'anthropic' | 'openai-compat';
+    readonly baseUrl?: string;
+    readonly apiKey?: string;
+    readonly structuredOutput: 'tools' | 'json_schema' | 'auto';
+    readonly vision: boolean;
+  };
   readonly models: {
     readonly planner: string;
     readonly spec: string;
@@ -157,8 +206,10 @@ export function loadConfig(raw: NodeJS.ProcessEnv = process.env): Config {
   }
 
   const parsed = EnvSchema.safeParse(cleaned);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
+  const conditional = crossFieldIssues(cleaned);
+
+  if (!parsed.success || conditional.length > 0) {
+    const issues = (parsed.success ? [] : parsed.error.issues)
       .map((issue) => {
         const name = issue.path.join('.') || '(env)';
         const message =
@@ -167,6 +218,7 @@ export function loadConfig(raw: NodeJS.ProcessEnv = process.env): Config {
             : issue.message;
         return `${name} ${message}`;
       })
+      .concat(conditional)
       .sort();
     throw new ConfigError(
       `Invalid environment (${issues.length} problem${issues.length === 1 ? '' : 's'}). ` +
@@ -182,7 +234,14 @@ export function loadConfig(raw: NodeJS.ProcessEnv = process.env): Config {
     port: e.PORT,
     host: e.HOST,
     corsOrigin: e.CORS_ORIGIN,
-    anthropicApiKey: e.ANTHROPIC_API_KEY,
+    ...(e.ANTHROPIC_API_KEY ? { anthropicApiKey: e.ANTHROPIC_API_KEY } : {}),
+    llm: {
+      provider: e.LLM_PROVIDER,
+      ...(e.LLM_BASE_URL ? { baseUrl: e.LLM_BASE_URL } : {}),
+      ...(e.LLM_API_KEY ? { apiKey: e.LLM_API_KEY } : {}),
+      structuredOutput: e.LLM_STRUCTURED_OUTPUT,
+      vision: e.LLM_VISION,
+    },
     models: {
       planner: e.PLANNER_MODEL,
       spec: e.SPEC_MODEL,

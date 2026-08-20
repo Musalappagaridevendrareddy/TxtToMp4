@@ -1,5 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+// Circular by design: openai-compat.ts imports PlannerError from here. Safe
+// because both sides only touch the imported binding inside function bodies,
+// never at module evaluation time.
+import { createOpenAICompatClient } from './openai-compat.js';
+
 /**
  * Model routing. Each stage gets the cheapest model that can do its job well;
  * the two that decide what the video *is* get the most capable one.
@@ -29,14 +34,60 @@ export interface PlannerClient {
 
 let cached: PlannerClient | undefined;
 
+/** Where the four decision stages run. */
+export type LlmProvider = 'anthropic' | 'openai-compat';
+
+export function configuredProvider(): LlmProvider {
+  const raw = (process.env.LLM_PROVIDER ?? 'anthropic').toLowerCase();
+  if (raw === 'anthropic') return 'anthropic';
+  if (raw === 'openai-compat' || raw === 'openai' || raw === 'local') return 'openai-compat';
+  throw new PlannerError(
+    `Unknown LLM_PROVIDER "${raw}". Use "anthropic" or "openai-compat".`,
+    'plan',
+  );
+}
+
 /**
- * The real client. Credentials resolve from the environment the same way the
- * SDK always does — ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or an `ant auth
- * login` profile — so an unset API key does not necessarily mean unauthenticated.
+ * The real client.
+ *
+ * With the default provider, credentials resolve from the environment the way
+ * the SDK always does — ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or an
+ * `ant auth login` profile — so an unset API key does not by itself mean
+ * unauthenticated.
+ *
+ * Set `LLM_PROVIDER=openai-compat` to run the decision stages on a locally
+ * hosted model instead; see `openai-compat.ts`. This is the only place that
+ * chooses a provider, so all four stages inherit it.
  */
 export function defaultClient(): PlannerClient {
-  if (!cached) cached = new Anthropic();
+  if (cached) return cached;
+
+  if (configuredProvider() === 'openai-compat') {
+    const baseUrl = process.env.LLM_BASE_URL;
+    if (!baseUrl) {
+      throw new PlannerError(
+        'LLM_PROVIDER=openai-compat requires LLM_BASE_URL, e.g. http://localhost:11434/v1',
+        'plan',
+      );
+    }
+    cached = createOpenAICompatClient({
+      baseUrl,
+      ...(process.env.LLM_API_KEY ? { apiKey: process.env.LLM_API_KEY } : {}),
+      structuredOutput:
+        (process.env.LLM_STRUCTURED_OUTPUT as 'tools' | 'json_schema' | 'auto' | undefined) ??
+        'auto',
+      supportsVision: process.env.LLM_VISION === '1',
+    });
+    return cached;
+  }
+
+  cached = new Anthropic();
   return cached;
+}
+
+/** Test seam: forget the memoised client so an env change takes effect. */
+export function resetClientCache(): void {
+  cached = undefined;
 }
 
 export class PlannerError extends Error {
