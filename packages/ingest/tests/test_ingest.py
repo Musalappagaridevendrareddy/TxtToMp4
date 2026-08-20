@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -150,6 +151,20 @@ def test_auto_reports_clearly_when_nothing_is_installed(monkeypatch):
 # ----------------------------------------------------------------- cli ----
 
 
+def _env() -> dict:
+    """conftest puts the package on sys.path for *this* process only.
+
+    The CLI runs in a subprocess, which inherits none of that, so the package
+    root has to travel via PYTHONPATH or `python -m ingest.cli` cannot resolve.
+    """
+    root = str(Path(__file__).resolve().parents[1])
+    existing = os.environ.get("PYTHONPATH", "")
+    return {
+        **os.environ,
+        "PYTHONPATH": f"{root}{os.pathsep}{existing}" if existing else root,
+    }
+
+
 def test_cli_emits_the_documented_json_shape(tmp_path):
     path = tmp_path / "notes.txt"
     path.write_text("compound interest accelerates", encoding="utf-8")
@@ -159,6 +174,7 @@ def test_cli_emits_the_documented_json_shape(tmp_path):
         capture_output=True,
         text=True,
         check=False,
+        env=_env(),
     )
 
     assert result.returncode == 0, result.stderr
@@ -180,6 +196,7 @@ def test_cli_exits_non_zero_when_nothing_could_be_read(tmp_path):
         capture_output=True,
         text=True,
         check=False,
+        env=_env(),
     )
 
     assert result.returncode == 1
