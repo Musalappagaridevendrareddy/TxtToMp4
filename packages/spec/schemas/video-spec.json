@@ -1,0 +1,135 @@
+{
+  "$ref": "#/definitions/VideoSpec",
+  "definitions": {
+    "VideoSpec": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "arc": {
+          "type": "string",
+          "enum": [
+            "hook_tension_build_payoff",
+            "compare_contrast",
+            "walkthrough",
+            "myth_correction"
+          ]
+        },
+        "palette": {
+          "type": "string",
+          "enum": [
+            "cool",
+            "warm",
+            "neutral"
+          ]
+        },
+        "pacing": {
+          "type": "string",
+          "enum": [
+            "brisk",
+            "deliberate"
+          ]
+        },
+        "totalDurationTarget": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 180
+        },
+        "beats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[a-z0-9_-]+$"
+              },
+              "narration": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220
+              },
+              "durationSeconds": {
+                "type": "number",
+                "minimum": 1.5,
+                "maximum": 12
+              },
+              "archetype": {
+                "type": "string",
+                "enum": [
+                  "sequence",
+                  "branch",
+                  "containment",
+                  "transformation",
+                  "fan_out",
+                  "layered_build",
+                  "zoom_detail",
+                  "parallel_race",
+                  "accumulation",
+                  "cycle",
+                  "spatial_map",
+                  "reveal_conceal"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "emphasis": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "maxItems": 6,
+                "default": []
+              },
+              "emotion": {
+                "type": "string",
+                "enum": [
+                  "neutral",
+                  "curious",
+                  "emphatic",
+                  "calm"
+                ],
+                "default": "neutral"
+              },
+              "holdAfterSeconds": {
+                "type": "number",
+                "minimum": 0.8,
+                "maximum": 3,
+                "default": 1.5
+              }
+            },
+            "required": [
+              "id",
+              "narration",
+              "durationSeconds",
+              "archetype",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 3,
+          "maxItems": 14
+        }
+      },
+      "required": [
+        "topic",
+        "arc",
+        "palette",
+        "pacing",
+        "totalDurationTarget",
+        "beats"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

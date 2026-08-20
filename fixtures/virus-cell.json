@@ -1,0 +1,90 @@
+{
+  "topic": "How does a virus infect a cell?",
+  "arc": "hook_tension_build_payoff",
+  "palette": "warm",
+  "pacing": "deliberate",
+  "totalDurationTarget": 44,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "A virus is barely alive. It is instructions wrapped in a shell.",
+      "durationSeconds": 5,
+      "archetype": "reveal_conceal",
+      "params": {
+        "cover": { "label": "protein shell" },
+        "hidden": [{ "label": "genetic code" }],
+        "reverse": false
+      },
+      "emphasis": ["instructions"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "dock",
+      "narration": "It drifts until it meets a cell whose surface it happens to fit.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [{ "label": "Drift" }, { "label": "Contact" }, { "label": "Lock on" }],
+        "arrowLabel": "by chance"
+      },
+      "emphasis": ["happens to fit"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "enter",
+      "narration": "It slips its instructions inside. The shell stays behind at the door.",
+      "durationSeconds": 5,
+      "archetype": "containment",
+      "params": {
+        "outer": { "label": "Cell" },
+        "inner": [{ "label": "viral code" }]
+      },
+      "emphasis": ["inside"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "hijack",
+      "narration": "The cell cannot tell the difference. It reads the new instructions as its own.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "the cell's code" },
+        "after": { "label": "viral code" },
+        "via": "read as trusted"
+      },
+      "emphasis": ["as its own"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "copies",
+      "narration": "So it builds copies. Thousands of them, using machinery meant for itself.",
+      "durationSeconds": 5,
+      "archetype": "fan_out",
+      "params": {
+        "source": { "label": "Hijacked cell" },
+        "targets": [{ "label": "New virus" }, { "label": "New virus" }, { "label": "New virus" }]
+      },
+      "emphasis": ["Thousands"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "payoff",
+      "narration": "The virus never forced anything. It only had to be misread as instructions.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "foreign code" },
+        "after": { "label": "trusted code" },
+        "via": "misread"
+      },
+      "emphasis": ["misread"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

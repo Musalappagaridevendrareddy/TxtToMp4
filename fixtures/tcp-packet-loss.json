@@ -1,0 +1,89 @@
+{
+  "topic": "How does TCP handle packet loss?",
+  "arc": "hook_tension_build_payoff",
+  "palette": "cool",
+  "pacing": "deliberate",
+  "totalDurationTarget": 42,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "A packet vanishes on the way. Somehow the file still arrives, complete.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "lost packet" },
+        "after": { "label": "complete file" },
+        "via": "how?"
+      },
+      "emphasis": ["vanishes"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "numbering",
+      "narration": "Every packet carries a number. The receiver knows exactly what it has.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [{ "label": "Packet 1" }, { "label": "Packet 2" }, { "label": "Packet 3" }],
+        "arrowLabel": "in order"
+      },
+      "emphasis": ["a number"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "ack",
+      "narration": "For each one it sends an acknowledgement back. The sender waits for that ack.",
+      "durationSeconds": 5,
+      "archetype": "cycle",
+      "params": {
+        "steps": [{ "label": "Send packet" }, { "label": "Receive" }, { "label": "Send ack" }],
+        "returnLabel": "next packet"
+      },
+      "emphasis": ["acknowledgement"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "loss",
+      "narration": "If no ack arrives before the timer expires, the sender assumes it was lost.",
+      "durationSeconds": 5,
+      "archetype": "branch",
+      "params": {
+        "question": { "label": "Ack arrived?" },
+        "outcomes": [{ "label": "Send next" }, { "label": "Resend it" }]
+      },
+      "emphasis": ["timer expires"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "retransmit",
+      "narration": "It simply sends that packet again. Wait, timeout, resend, until the ack returns.",
+      "durationSeconds": 5,
+      "archetype": "cycle",
+      "params": {
+        "steps": [{ "label": "Send" }, { "label": "Timeout" }, { "label": "Resend" }],
+        "returnLabel": "until ack"
+      },
+      "emphasis": ["sends that packet again"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "payoff",
+      "narration": "Reliability is not a perfect network. It is a loop that refuses to give up.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "lossy network" },
+        "after": { "label": "reliable stream" },
+        "via": "retry loop"
+      },
+      "emphasis": ["refuses to give up"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

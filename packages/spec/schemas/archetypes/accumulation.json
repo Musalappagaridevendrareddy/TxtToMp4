@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 28
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 28
+          },
+          "magnitude": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "label",
+          "magnitude"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 2,
+      "maxItems": 5
+    }
+  },
+  "required": [
+    "subject",
+    "stages"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

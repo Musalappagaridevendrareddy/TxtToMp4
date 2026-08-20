@@ -1,0 +1,85 @@
+{
+  "topic": "Why does compound interest accelerate?",
+  "arc": "hook_tension_build_payoff",
+  "palette": "warm",
+  "pacing": "deliberate",
+  "totalDurationTarget": 36,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "Money left alone does not grow in a line. It bends upward.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "straight line" },
+        "after": { "label": "curve" },
+        "via": "compounding"
+      },
+      "emphasis": ["bends upward"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "simple",
+      "narration": "Simple interest pays you on the original amount, the same every year.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [{ "label": "Year 1: +5" }, { "label": "Year 2: +5" }, { "label": "Year 3: +5" }],
+        "arrowLabel": "flat"
+      },
+      "emphasis": ["the original amount"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "the-turn",
+      "narration": "Compound interest pays you on the interest too. Growth starts feeding itself.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "interest" },
+        "after": { "label": "more principal" },
+        "via": "reinvested"
+      },
+      "emphasis": ["feeding itself"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "accumulate",
+      "narration": "Each year the base is bigger, so each year adds more than the last.",
+      "durationSeconds": 5,
+      "archetype": "accumulation",
+      "params": {
+        "subject": { "label": "Balance" },
+        "stages": [
+          { "label": "Year 1", "magnitude": 0.08 },
+          { "label": "Year 5", "magnitude": 0.18 },
+          { "label": "Year 10", "magnitude": 0.34 },
+          { "label": "Year 15", "magnitude": 0.55 }
+        ]
+      },
+      "emphasis": ["bigger"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "payoff",
+      "narration": "Late years dwarf early ones. The acceleration was there from the first day.",
+      "durationSeconds": 5.5,
+      "archetype": "accumulation",
+      "params": {
+        "subject": { "label": "30 years" },
+        "stages": [
+          { "label": "Year 10", "magnitude": 0.14 },
+          { "label": "Year 20", "magnitude": 0.38 },
+          { "label": "Year 30", "magnitude": 1 }
+        ]
+      },
+      "emphasis": ["dwarf early ones"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

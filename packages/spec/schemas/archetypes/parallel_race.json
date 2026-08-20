@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "properties": {
+    "laneA": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 28
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 28
+          },
+          "minItems": 2,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "label",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "laneB": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 28
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 28
+          },
+          "minItems": 2,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "label",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    }
+  },
+  "required": [
+    "laneA",
+    "laneB"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

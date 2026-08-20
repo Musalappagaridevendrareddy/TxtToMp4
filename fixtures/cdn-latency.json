@@ -1,0 +1,88 @@
+{
+  "topic": "How does a CDN reduce latency?",
+  "arc": "walkthrough",
+  "palette": "cool",
+  "pacing": "deliberate",
+  "totalDurationTarget": 35,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "Your request travels to a server. Distance costs time, and light is not instant.",
+      "durationSeconds": 5,
+      "archetype": "spatial_map",
+      "params": {
+        "nodes": [
+          { "label": "You", "x": 0.12, "y": 0.5 },
+          { "label": "Server", "x": 0.88, "y": 0.5 }
+        ],
+        "edges": [{ "from": 0, "to": 1, "label": "distance" }]
+      },
+      "emphasis": ["Distance costs time"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "far-origin",
+      "narration": "An origin server across an ocean answers slowly no matter how fast it is.",
+      "durationSeconds": 5,
+      "archetype": "spatial_map",
+      "params": {
+        "nodes": [
+          { "label": "You", "x": 0.12, "y": 0.5 },
+          { "label": "Origin", "x": 0.88, "y": 0.5 }
+        ],
+        "edges": [{ "from": 0, "to": 1, "label": "180 ms" }]
+      },
+      "emphasis": ["across an ocean"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "copies",
+      "narration": "A CDN copies the content to machines placed near everybody.",
+      "durationSeconds": 5,
+      "archetype": "fan_out",
+      "params": {
+        "source": { "label": "Origin" },
+        "targets": [{ "label": "Tokyo" }, { "label": "Paris" }, { "label": "Iowa" }]
+      },
+      "emphasis": ["near everybody"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "nearest",
+      "narration": "Now the request stops at the nearest one. Ten milliseconds, not two hundred.",
+      "durationSeconds": 5,
+      "archetype": "spatial_map",
+      "params": {
+        "nodes": [
+          { "label": "You", "x": 0.12, "y": 0.5 },
+          { "label": "Edge", "x": 0.38, "y": 0.5 },
+          { "label": "Origin", "x": 0.88, "y": 0.5 }
+        ],
+        "edges": [
+          { "from": 0, "to": 1, "label": "10 ms" },
+          { "from": 1, "to": 2, "label": "only on a miss" }
+        ]
+      },
+      "emphasis": ["nearest one"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "payoff",
+      "narration": "A CDN does not make the network faster. It makes the journey shorter.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "180 ms" },
+        "after": { "label": "10 ms" },
+        "via": "shorter journey"
+      },
+      "emphasis": ["shorter"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

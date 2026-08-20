@@ -1,0 +1,32 @@
+{
+  "name": "@explainer/compositor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotion composition that assembles narrated Manim beats into the finished explainer",
+  "main": "./dist/render.js",
+  "types": "./dist/render.d.ts",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Explainer out/explainer.mp4",
+    "build": "tsc -p tsconfig.node.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/__tests__/*.test.js"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.246",
+    "@remotion/cli": "4.0.246",
+    "@remotion/media-utils": "4.0.246",
+    "@remotion/renderer": "4.0.246",
+    "@remotion/transitions": "4.0.246",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.246",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "explainer-narration"
+version = "0.1.0"
+description = "Narration synthesis and timeline building for the explainer engine"
+requires-python = ">=3.10"
+license = { text = "UNLICENSED" }
+# Deliberately EMPTY. The base install must work on a laptop with no GPU and no
+# model weights: everything heavy lives behind an extra and is imported lazily.
+dependencies = []
+
+[project.optional-dependencies]
+# Draft engine: CPU, ~33x realtime. Also needs the espeak-ng binary on PATH.
+kokoro = ["kokoro>=0.9", "soundfile>=0.12"]
+# Final engine: duration-controlled, GPU expected. torch is intentionally NOT
+# pinned here — install the build that matches your CUDA runtime first, e.g.
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+indextts2 = ["indextts>=0.2"]
+# Word-level forced alignment. Pulls torch + faster-whisper.
+align = ["whisperx>=3.1"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+explainer-narrate = "narration.synthesize:main"
+
+[tool.setuptools.packages.find]
+include = ["narration*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

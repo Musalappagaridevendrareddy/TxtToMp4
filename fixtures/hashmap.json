@@ -1,0 +1,114 @@
+{
+  "topic": "How does a hash map work?",
+  "arc": "myth_correction",
+  "palette": "cool",
+  "pacing": "deliberate",
+  "totalDurationTarget": 50,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "You hand a hash map a word. It hands back a value instantly. No searching.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "word" },
+        "after": { "label": "value" },
+        "via": "hash map"
+      },
+      "emphasis": ["instantly"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "naive-scan",
+      "narration": "A list would check each slot in turn. A thousand entries, a thousand checks.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [
+          { "label": "Check slot 1" },
+          { "label": "Check slot 2" },
+          { "label": "Check slot 3" }
+        ],
+        "arrowLabel": "then"
+      },
+      "emphasis": ["each slot"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "the-trick",
+      "narration": "The trick is arithmetic. The key itself is turned into an address.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "apple" },
+        "after": { "label": "index 4" },
+        "via": "hash function"
+      },
+      "emphasis": ["turned into an address"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "buckets",
+      "narration": "Every key lands in one bucket, chosen by that arithmetic, not by searching.",
+      "durationSeconds": 5,
+      "archetype": "fan_out",
+      "params": {
+        "source": { "label": "hash function" },
+        "targets": [
+          { "label": "Bucket 0" },
+          { "label": "Bucket 1" },
+          { "label": "Bucket 2" },
+          { "label": "Bucket 3" }
+        ],
+        "highlightIndex": 2
+      },
+      "emphasis": ["one bucket"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "collision",
+      "narration": "Two keys can land together. That collision is handled by probing the next slot.",
+      "durationSeconds": 5,
+      "archetype": "branch",
+      "params": {
+        "question": { "label": "Bucket taken?" },
+        "outcomes": [{ "label": "Store it here" }, { "label": "Probe next slot" }]
+      },
+      "emphasis": ["collision"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "inside-bucket",
+      "narration": "Inside a bucket sits a short list. Short, so reading it costs almost nothing.",
+      "durationSeconds": 5,
+      "archetype": "zoom_detail",
+      "params": {
+        "overview": { "label": "Hash map" },
+        "focus": { "label": "Bucket 2" },
+        "revealed": [{ "label": "apple -> 3" }, { "label": "grape -> 7" }]
+      },
+      "emphasis": ["short list"],
+      "emotion": "calm",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "payoff",
+      "narration": "That is the payoff. A thousand comparisons collapse into a single jump.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "1000 checks" },
+        "after": { "label": "1 jump" },
+        "via": "hashing"
+      },
+      "emphasis": ["single jump"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

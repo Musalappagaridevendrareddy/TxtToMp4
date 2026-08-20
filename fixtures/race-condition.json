@@ -1,0 +1,91 @@
+{
+  "topic": "What is a race condition?",
+  "arc": "hook_tension_build_payoff",
+  "palette": "cool",
+  "pacing": "deliberate",
+  "totalDurationTarget": 45,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "Two threads add one to the same counter. It ends up one higher, not two.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "two increments" },
+        "after": { "label": "counter = 1" },
+        "via": "something went wrong"
+      },
+      "emphasis": ["not two"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "not-atomic",
+      "narration": "Adding one is not one action. It is read, then add, then write back.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [{ "label": "read x" }, { "label": "add 1" }, { "label": "write x" }],
+        "arrowLabel": "then"
+      },
+      "emphasis": ["read, then add, then write"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "interleave",
+      "narration": "Run those steps side by side and both threads read the very same zero.",
+      "durationSeconds": 5.5,
+      "archetype": "parallel_race",
+      "params": {
+        "laneA": { "label": "Thread A", "steps": ["read x = 0", "write x = 1"] },
+        "laneB": { "label": "Thread B", "steps": ["read x = 0", "write x = 1"] },
+        "verdict": "one increment is lost"
+      },
+      "emphasis": ["the very same zero"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "lost-update",
+      "narration": "The second write overwrites the first. One increment simply vanishes.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "x = 1, x = 1" },
+        "after": { "label": "x = 1" },
+        "via": "lost update"
+      },
+      "emphasis": ["vanishes"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "the-fix",
+      "narration": "A lock makes the three steps indivisible. One thread finishes before the other starts.",
+      "durationSeconds": 6,
+      "archetype": "containment",
+      "params": {
+        "outer": { "label": "lock" },
+        "inner": [{ "label": "read x" }, { "label": "add 1" }, { "label": "write x" }]
+      },
+      "emphasis": ["indivisible"],
+      "emotion": "calm",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "payoff",
+      "narration": "The bug was never in the arithmetic. It was in the gap between the steps.",
+      "durationSeconds": 5.5,
+      "archetype": "zoom_detail",
+      "params": {
+        "overview": { "label": "read, add, write" },
+        "focus": { "label": "the gap" },
+        "revealed": [{ "label": "another thread runs" }]
+      },
+      "emphasis": ["the gap"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

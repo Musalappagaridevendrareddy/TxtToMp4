@@ -1,0 +1,82 @@
+{
+  "topic": "What does a compiler do?",
+  "arc": "walkthrough",
+  "palette": "neutral",
+  "pacing": "deliberate",
+  "totalDurationTarget": 36,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "You write words. The machine runs numbers. Something between does the translation.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "source code" },
+        "after": { "label": "machine code" },
+        "via": "compiler"
+      },
+      "emphasis": ["translation"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "tokens",
+      "narration": "First it splits your text into tokens, the smallest pieces that mean anything.",
+      "durationSeconds": 5,
+      "archetype": "sequence",
+      "params": {
+        "steps": [{ "label": "if" }, { "label": "x" }, { "label": "> 0" }],
+        "arrowLabel": "tokens"
+      },
+      "emphasis": ["tokens"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "tree",
+      "narration": "Those tokens are arranged into a tree that captures the structure.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "tokens" },
+        "after": { "label": "parse tree" },
+        "via": "parsing"
+      },
+      "emphasis": ["a tree"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "layers",
+      "narration": "Then a middle language, tuned and optimised, sitting between your code and the chip.",
+      "durationSeconds": 5.5,
+      "archetype": "layered_build",
+      "params": {
+        "layers": [
+          { "label": "Tokens" },
+          { "label": "Parse tree" },
+          { "label": "IR" },
+          { "label": "Machine code" }
+        ],
+        "stackLabel": "compiler"
+      },
+      "emphasis": ["optimised"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "payoff",
+      "narration": "A compiler is not one step. It is a stack of small, careful rewrites.",
+      "durationSeconds": 5.5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "one big leap" },
+        "after": { "label": "four rewrites" },
+        "via": "each one provable"
+      },
+      "emphasis": ["careful rewrites"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    }
+  ]
+}

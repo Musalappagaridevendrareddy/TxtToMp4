@@ -1,0 +1,28 @@
+{
+  // Node-side build: the pure logic, the theme, the programmatic render entry
+  // and the tests. Deliberately excludes the .tsx files -- those are compiled by
+  // Remotion's own bundler, never by tsc, so they never need a dist artifact.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Node16 (not "CommonJS"/"Node") so that the `exports` maps of the
+    // @remotion/* packages resolve. This package has no `"type": "module"`, so
+    // Node16 puts every file in CommonJS mode: extensionless relative imports
+    // keep working and tsc emits require()-based output.
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "noEmit": false,
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "isolatedModules": false
+  },
+  "include": [
+    "src/lib/**/*.ts",
+    "src/theme.ts",
+    "src/render.ts",
+    "src/keyframes.ts",
+    "src/__tests__/**/*.ts"
+  ]
+}
