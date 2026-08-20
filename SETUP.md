@@ -8,12 +8,15 @@ on the box that actually renders.
 
 | Verified on the dev machine | Not yet executed anywhere |
 |---|---|
-| Full TypeScript build of all four TS packages | Manim rendering a real WebM |
-| TS tests: spec, planner, compositor | Kokoro / IndexTTS-2 synthesis |
-| Narration tests, with no torch installed | WhisperX alignment |
-| All 12 archetypes' layout/timing logic, headless | Remotion producing an MP4 |
+| `npm run build/typecheck/test --workspaces` all clean | Manim rendering a real WebM |
+| 83 TypeScript tests (spec 16, planner 12, compositor 25, api 30) | Kokoro / IndexTTS-2 synthesis |
+| 228 Python tests (manim-scenes 181, narration 47) | WhisperX alignment |
+| All 12 archetypes' layout, timing and budget logic, headless | Remotion producing an MP4 |
 | 7 fixtures against the real validator | Postgres / Redis / MinIO |
 | Spec hash agreement between TypeScript and Python | The live Claude API calls |
+| `scripts/render.mjs` through spec -> narration -> timeline | ffmpeg concatenation |
+
+311 tests total. None of them needs an API key, a GPU, or a model download.
 
 The Claude calls are covered by tests against a scripted fake client, so the
 request shapes (forced tool use, repair transcript, refusal handling) are
