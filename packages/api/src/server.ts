@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+import { mkdir, writeFile } from 'node:fs/promises';
+import { basename, extname, join } from 'node:path';
+
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
-import { TERMINAL_STATUSES, type Db, type JobRow, type JobStatus } from './db.js';
+import { TERMINAL_STATUSES, type Attachment, type Db, type JobRow, type JobStatus } from './db.js';
 import { isMainModule } from './migrate.js';
 import { RENDER_QUEUE, type JobEnqueuer } from './queue.js';
 
@@ -28,6 +32,12 @@ export interface ServerDeps {
   corsOrigin?: string;
   /** Per-dependency ceiling for `/healthz` probes. See `withTimeout`. */
   healthTimeoutMs?: number;
+  /** Where uploaded files land, one directory per job. */
+  uploadDir?: string;
+  /** Per-file ceiling. Default 25 MB. */
+  maxUploadBytes?: number;
+  /** How many files one request may carry. Default 10. */
+  maxUploads?: number;
 }
 
 /** Default ceiling for a single `/healthz` probe. */
@@ -142,6 +152,87 @@ class HttpError extends Error {
   }
 }
 
+
+/**
+ * Read a multipart body into memory.
+ *
+ * Uploads are bounded by the plugin's `fileSize`/`files` limits, so buffering
+ * is safe and avoids a temp-file dance for what are typically small documents.
+ */
+async function readMultipart(
+  req: { parts(): AsyncIterableIterator<any> },
+  maxUploads: number,
+): Promise<{ question: string; files: Array<{ filename: string; body: Buffer }> }> {
+  let question = '';
+  const files: Array<{ filename: string; body: Buffer }> = [];
+
+  for await (const part of req.parts()) {
+    if (part.type === 'file') {
+      if (files.length >= maxUploads) {
+        throw new HttpError(400, `At most ${maxUploads} files may be uploaded`);
+      }
+      const body = await part.toBuffer();
+      if (body.length > 0) {
+        files.push({ filename: safeName(part.filename ?? 'upload'), body });
+      }
+    } else if (part.fieldname === 'question') {
+      question = String(part.value ?? '');
+    }
+  }
+
+  const parsed = RenderBody.safeParse({ question });
+  if (!parsed.success) {
+    throw new HttpError(
+      400,
+      'Invalid request body',
+      parsed.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`),
+    );
+  }
+  return { question: parsed.data.question, files };
+}
+
+/**
+ * Reduce a client-supplied filename to something safe to join onto a path.
+ *
+ * The name arrives from the browser and is attacker-controlled: `basename`
+ * strips any directory component, and the remaining sanitisation removes what
+ * could still surprise a shell or a filesystem downstream.
+ */
+export function safeName(raw: string): string {
+  const base = basename(raw).replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '');
+  const trimmed = base.slice(0, 120);
+  return trimmed || `upload${extname(raw) || ''}`;
+}
+
+async function persistUploads(
+  jobId: string,
+  files: Array<{ filename: string; body: Buffer }>,
+  root: string,
+): Promise<Attachment[]> {
+  if (files.length === 0) return [];
+
+  const dir = join(root, jobId, 'uploads');
+  await mkdir(dir, { recursive: true });
+
+  const out: Attachment[] = [];
+  const used = new Set<string>();
+
+  for (const file of files) {
+    // Two uploads called "scan.pdf" must not clobber each other.
+    let name = file.filename;
+    let n = 1;
+    while (used.has(name)) {
+      const ext = extname(file.filename);
+      name = `${file.filename.slice(0, file.filename.length - ext.length)}_${n++}${ext}`;
+    }
+    used.add(name);
+
+    await writeFile(join(dir, name), file.body);
+    out.push({ filename: name, path: join('uploads', name), bytes: file.body.length });
+  }
+  return out;
+}
+
 export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({
     logger: {
@@ -152,42 +243,70 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     requestIdHeader: 'x-request-id',
   });
 
+  const maxUploadBytes = deps.maxUploadBytes ?? 25 * 1024 * 1024;
+  const maxUploads = deps.maxUploads ?? 10;
+
   app.register(cors, { origin: deps.corsOrigin ?? '*' });
+  app.register(multipart, {
+    limits: { fileSize: maxUploadBytes, files: maxUploads, fields: 10 },
+  });
 
   app.addHook('onSend', async (req, reply) => {
     reply.header('x-request-id', String(req.id));
   });
 
   // POST /render ---------------------------------------------------------
+  // Accepts JSON `{question}` or multipart with a `question` field plus any
+  // number of files. Uploads are evidence carried alongside the question, so a
+  // request without them behaves exactly as it did before.
   app.post('/render', async (req, reply) => {
-    const body = RenderBody.safeParse(req.body);
-    if (!body.success) {
-      throw new HttpError(
-        400,
-        'Invalid request body',
-        body.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`),
-      );
+    let question: string;
+    let pending: Array<{ filename: string; body: Buffer }> = [];
+
+    if (req.isMultipart()) {
+      const collected = await readMultipart(req, maxUploads);
+      question = collected.question;
+      pending = collected.files;
+    } else {
+      const body = RenderBody.safeParse(req.body);
+      if (!body.success) {
+        throw new HttpError(
+          400,
+          'Invalid request body',
+          body.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`),
+        );
+      }
+      question = body.data.question;
     }
 
-    const { question } = body.data;
-
-    // Cache: the same question already produced a finished video.
-    const cached = await deps.db.findCompletedByQuestion(question);
-    if (cached?.video_url) {
-      req.log.info({ jobId: cached.id, specHash: cached.spec_hash }, 'question cache hit');
-      return reply.code(200).send({
-        jobId: cached.id,
-        cached: true,
-        videoUrl: cached.video_url,
-        status: cached.status,
-      });
+    // Cache on the question alone only when nothing was uploaded: the same
+    // words with a different document are a different job.
+    if (pending.length === 0) {
+      const cached = await deps.db.findCompletedByQuestion(question);
+      if (cached?.video_url) {
+        req.log.info({ jobId: cached.id, specHash: cached.spec_hash }, 'question cache hit');
+        return reply.code(200).send({
+          jobId: cached.id,
+          cached: true,
+          videoUrl: cached.video_url,
+          status: cached.status,
+        });
+      }
     }
 
-    const job = await deps.db.createJob({ question });
+    const jobId = randomUUID();
+    const attachments = await persistUploads(jobId, pending, deps.uploadDir ?? './renders');
+
+    const job = await deps.db.createJob({ id: jobId, question, attachments });
     await deps.queue.add(RENDER_QUEUE, { jobId: job.id, question: job.question });
-    req.log.info({ jobId: job.id }, 'render enqueued');
+    req.log.info({ jobId: job.id, attachments: attachments.length }, 'render enqueued');
 
-    return reply.code(202).send({ jobId: job.id, cached: false, status: job.status });
+    return reply.code(202).send({
+      jobId: job.id,
+      cached: false,
+      status: job.status,
+      attachments: attachments.map((a) => a.filename),
+    });
   });
 
   // GET /jobs/:id --------------------------------------------------------

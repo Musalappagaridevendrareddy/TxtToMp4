@@ -13,7 +13,7 @@ import {
   toolUseOf,
   type PlannerClient,
 } from './client.js';
-import { specRepairPrompt, specSystemPrompt, specUserPrompt } from './prompts.js';
+import { specRepairPrompt, specSystemPrompt, specUserPrompt, type Source } from './prompts.js';
 
 export const EMIT_TOOL_NAME = 'emit_video_spec';
 
@@ -36,6 +36,8 @@ export interface EmitOptions {
   maxAttempts?: number;
   /** Called once per attempt so callers can log the repair loop. */
   onAttempt?: (attempt: number, previousIssues: string[]) => void;
+  /** Uploaded-file text, carried alongside the question. */
+  sources?: readonly Source[];
 }
 
 export interface EmitResult {
@@ -62,7 +64,7 @@ export async function emitSpec(
   const maxAttempts = options.maxAttempts ?? 3;
 
   const messages: Anthropic.MessageParam[] = [
-    { role: 'user', content: specUserPrompt(question, planText) },
+    { role: 'user', content: specUserPrompt(question, planText, options.sources ?? []) },
   ];
   const repairs: string[][] = [];
 

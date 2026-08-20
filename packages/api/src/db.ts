@@ -29,6 +29,14 @@ export type JobStatus =
 /** Terminal states: the worker will not touch these again. */
 export const TERMINAL_STATUSES: readonly JobStatus[] = ['completed', 'failed', 'cancelled'];
 
+/** One uploaded file, stored beside the job's work directory. */
+export interface Attachment {
+  filename: string;
+  /** Relative to the job work dir, so a moved render root does not break it. */
+  path: string;
+  bytes: number;
+}
+
 export interface JobRow {
   id: string;
   question: string;
@@ -39,6 +47,7 @@ export interface JobRow {
   video_url: string | null;
   spec_hash: string | null;
   iterations: number;
+  attachments: Attachment[];
   created_at: Date;
   updated_at: Date;
 }
@@ -67,7 +76,11 @@ export interface JobPatch {
  * can hand in a fake without standing up Postgres.
  */
 export interface Db {
-  createJob(input: { id?: string; question: string }): Promise<JobRow>;
+  createJob(input: {
+    id?: string;
+    question: string;
+    attachments?: Attachment[];
+  }): Promise<JobRow>;
   getJob(id: string): Promise<JobRow | undefined>;
   updateJob(id: string, patch: JobPatch): Promise<JobRow | undefined>;
   listJobs(input: { limit: number; offset: number; status?: JobStatus }): Promise<{
@@ -107,14 +120,15 @@ export function createPool(databaseUrl: string): Pool {
 }
 
 const JOB_COLUMNS =
-  'id, question, status, spec, plan, error, video_url, spec_hash, iterations, created_at, updated_at';
+  'id, question, status, spec, plan, error, video_url, spec_hash, iterations, attachments, created_at, updated_at';
 
 export function createDb(pool: Pool): Db {
   return {
-    async createJob({ id = randomUUID(), question }) {
+    async createJob({ id = randomUUID(), question, attachments }) {
       const { rows } = await pool.query<JobRow>(
-        `INSERT INTO jobs (id, question, status) VALUES ($1, $2, 'queued') RETURNING ${JOB_COLUMNS}`,
-        [id, normalizeQuestion(question)],
+        `INSERT INTO jobs (id, question, status, attachments)
+         VALUES ($1, $2, 'queued', $3::jsonb) RETURNING ${JOB_COLUMNS}`,
+        [id, normalizeQuestion(question), JSON.stringify(attachments ?? [])],
       );
       return rows[0]!;
     },

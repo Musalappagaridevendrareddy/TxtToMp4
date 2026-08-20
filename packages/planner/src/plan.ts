@@ -6,13 +6,18 @@ import {
   textOf,
   type PlannerClient,
 } from './client.js';
-import { plannerPrompt } from './prompts.js';
+import { plannerPrompt, type Source } from './prompts.js';
 
 export interface PlanOptions {
   client?: PlannerClient;
   model?: string;
   /** Higher effort buys better concept decomposition; this is worth paying for. */
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  /**
+   * Text extracted from files the user uploaded. Evidence alongside the
+   * question, never a replacement for it — see `sourcesSection`.
+   */
+  sources?: readonly Source[];
 }
 
 /**
@@ -32,7 +37,7 @@ export async function plan(question: string, options: PlanOptions = {}): Promise
       max_tokens: 16000,
       thinking: { type: 'adaptive' },
       output_config: { effort: options.effort ?? 'high' },
-      messages: [{ role: 'user', content: plannerPrompt(question) }],
+      messages: [{ role: 'user', content: plannerPrompt(question, options.sources ?? []) }],
     });
   } catch (cause) {
     throw new PlannerError('The planner call failed', 'plan', cause);

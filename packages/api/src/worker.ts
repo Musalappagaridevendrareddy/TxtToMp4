@@ -11,7 +11,7 @@ import {
   type TypedVideoSpec,
 } from '@explainer/spec';
 
-import type { Db, JobStatus } from './db.js';
+import type { Attachment, Db, JobStatus } from './db.js';
 import { isMainModule } from './migrate.js';
 import type { Storage } from './storage.js';
 import { videoKey } from './storage.js';
@@ -124,9 +124,24 @@ export interface CritiqueResult {
   revisedSpec?: unknown;
 }
 
+/** Text extracted from one uploaded file. Mirrors the ingest CLI's output. */
+export interface Source {
+  filename: string;
+  kind: 'text' | 'pdf' | 'image' | 'unsupported';
+  engine: string;
+  text: string;
+  truncated?: boolean;
+  warnings?: string[];
+}
+
 export interface Planner {
-  plan(input: { question: string }): Promise<string>;
-  emitSpec(input: { question: string; plan: string; feedback?: string[] }): Promise<unknown>;
+  plan(input: { question: string; sources?: Source[] }): Promise<string>;
+  emitSpec(input: {
+    question: string;
+    plan: string;
+    feedback?: string[];
+    sources?: Source[];
+  }): Promise<unknown>;
   critique(input: {
     question: string;
     spec: TypedVideoSpec;
@@ -187,6 +202,49 @@ export interface PipelineOutcome {
  * Pipeline
  * ------------------------------------------------------------------ */
 
+/**
+ * Run the ingest CLI over a job's uploads.
+ *
+ * Failure here is logged and swallowed by design: the question stands on its
+ * own, so losing a source degrades the explanation rather than the request.
+ * The one thing this must not do is let a bad upload take down an otherwise
+ * valid render.
+ */
+export async function extractSources(
+  jobId: string,
+  attachments: Attachment[],
+  jobDir: string,
+  deps: Pick<PipelineDeps, 'run' | 'log' | 'pythonBin' | 'pythonRoot' | 'timeouts'>,
+): Promise<Source[]> {
+  if (attachments.length === 0) return [];
+
+  const paths = attachments.map((a) => join(jobDir, a.path));
+
+  try {
+    const { stdout } = await deps.run(deps.pythonBin, ['-m', 'ingest.cli', ...paths], {
+      cwd: jobDir,
+      env: { ...process.env, PYTHONPATH: deps.pythonRoot },
+      timeoutMs: deps.timeouts.narrationMs,
+    });
+
+    const sources = (JSON.parse(stdout) as { sources?: Source[] }).sources ?? [];
+
+    for (const source of sources) {
+      if (source.warnings?.length) {
+        deps.log.warn({ jobId, file: source.filename, warnings: source.warnings }, 'ingest warning');
+      }
+    }
+    deps.log.info(
+      { jobId, read: sources.filter((s) => s.text).length, of: attachments.length },
+      'sources extracted',
+    );
+    return sources;
+  } catch (error) {
+    deps.log.error({ jobId, err: error }, 'ingest failed; continuing from the question alone');
+    return [];
+  }
+}
+
 export async function runPipeline(
   input: { jobId: string; question: string },
   deps: PipelineDeps,
@@ -221,14 +279,21 @@ export async function runPipeline(
   try {
     await mkdir(jobDir, { recursive: true });
 
+    // 0. Uploads ----------------------------------------------------------
+    // Extracted text travels with the question as evidence; it never replaces
+    // it. A failed extraction is therefore not fatal — the question alone is
+    // still a complete request.
+    const jobRow = await deps.db.getJob(jobId);
+    const sources = await extractSources(jobId, jobRow?.attachments ?? [], jobDir, deps);
+
     // 1. Plan -------------------------------------------------------------
     await enter('planning');
-    const plan = await deps.planner.plan({ question });
+    const plan = await deps.planner.plan({ question, sources });
     await deps.db.updateJob(jobId, { plan });
 
     // 2. Spec, with the emitter's own validation feedback fed back in ------
     await enter('spec');
-    let spec = await emitValidSpec({ question, plan }, deps);
+    let spec = await emitValidSpec({ question, plan, sources }, deps);
     hash = specHash(spec);
     await deps.db.updateJob(jobId, { spec, specHash: hash });
     await deps.db.recordRender({ jobId, stage: 'spec_accepted', specHash: hash, artifactPath: null });
@@ -488,7 +553,7 @@ export async function extractKeyframes(
  * BullMQ job would only burn tokens on the same prompt.
  */
 export async function emitValidSpec(
-  input: { question: string; plan: string },
+  input: { question: string; plan: string; sources?: Source[] },
   deps: Pick<PipelineDeps, 'planner' | 'maxSpecAttempts' | 'log'>,
 ): Promise<TypedVideoSpec> {
   let feedback: string[] | undefined;
@@ -530,7 +595,7 @@ interface PlannerModule {
   emitSpec(
     question: string,
     planText: string,
-    options?: { maxAttempts?: number },
+    options?: { maxAttempts?: number; sources?: Source[] },
   ): Promise<{ spec: TypedVideoSpec; attempts: number; repairs: string[][] }>;
   critique(
     spec: TypedVideoSpec,
@@ -551,13 +616,14 @@ export async function loadPlanner(): Promise<Planner> {
   }
 
   return {
-    plan: ({ question }) => mod.plan(question),
+    plan: ({ question, sources }) => mod.plan(question, sources ? { sources } : {}),
 
     // The planner owns its own repair loop, and it is the better one: it keeps
     // the rejected attempt in the transcript and hands the model the
     // validator's own words. Let it run that loop; the worker's outer retry
     // (maxSpecAttempts) then sits at 1 by default — see config.
-    emitSpec: async ({ question, plan }) => (await mod.emitSpec(question, plan)).spec,
+    emitSpec: async ({ question, plan, sources }) =>
+      (await mod.emitSpec(question, plan, sources ? { sources } : {})).spec,
 
     critique: async ({ spec, keyframePaths }) => {
       const outcome = await mod.critique(spec, keyframePaths);

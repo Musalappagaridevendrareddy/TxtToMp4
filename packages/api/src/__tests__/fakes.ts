@@ -25,7 +25,7 @@ export function createFakeDb(seed: JobRow[] = []): FakeDb {
       return renders.filter((r) => r.job_id === jobId).map((r) => r.stage);
     },
 
-    async createJob({ id = randomUUID(), question }) {
+    async createJob({ id = randomUUID(), question, attachments = [] }) {
       const now = new Date();
       const row: JobRow = {
         id,
@@ -33,6 +33,7 @@ export function createFakeDb(seed: JobRow[] = []): FakeDb {
         status: 'queued',
         spec: null,
         plan: null,
+        attachments,
         error: null,
         video_url: null,
         spec_hash: null,
@@ -128,6 +129,7 @@ export function makeJobRow(overrides: Partial<JobRow> & { question: string }): J
     video_url: null,
     spec_hash: null,
     iterations: 0,
+    attachments: [],
     created_at: now,
     updated_at: now,
     ...overrides,

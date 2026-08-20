@@ -36,5 +36,7 @@ export {
   plannerPrompt,
   specRepairPrompt,
   specSystemPrompt,
+  sourcesSection,
   specUserPrompt,
+  type Source,
 } from './prompts.js';
