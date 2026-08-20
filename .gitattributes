@@ -1,0 +1,22 @@
+# This repo is authored on Windows and runs on Linux (DGX Spark). A shell
+# script checked out with CRLF fails with a confusing "bad interpreter" error,
+# because the trailing \r becomes part of the interpreter path. Pin text files
+# to LF so core.autocrlf on a Windows clone cannot rewrite them.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.mjs  text eol=lf
+*.js   text eol=lf
+*.ts   text eol=lf
+*.py   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+.env.example text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.mp4  binary
+*.webm binary
+*.wav  binary

@@ -4,19 +4,34 @@ The repo was authored on a machine with no ML stack installed. Everything that
 does not need a model is verified and green there; this document is what to run
 on the box that actually renders.
 
+## Shortcut: DGX Spark
+
+On a DGX Spark (GB10, aarch64, DGX OS) the whole of this document is automated:
+
+```bash
+./scripts/install-dgx-spark.sh
+```
+
+It is idempotent, skips optional stages that fail rather than aborting, and
+ends by rendering one real Manim beat so you have something to look at. Use
+`--verify-only` to re-check an existing install without changing anything, and
+`--skip-gpu` to set up the CPU path alone. Read the rest of this document when
+a stage warns and you want to know what it was trying to do.
+
 ## What is verified vs what is not
 
 | Verified on the dev machine | Not yet executed anywhere |
 |---|---|
 | `npm run build/typecheck/test --workspaces` all clean | Manim rendering a real WebM |
-| 83 TypeScript tests (spec 16, planner 12, compositor 25, api 30) | Kokoro / IndexTTS-2 synthesis |
+| 84 TypeScript tests (spec 16, planner 12, compositor 25, api 31) | Kokoro / IndexTTS-2 synthesis |
 | 228 Python tests (manim-scenes 181, narration 47) | WhisperX alignment |
 | All 12 archetypes' layout, timing and budget logic, headless | Remotion producing an MP4 |
-| 7 fixtures against the real validator | Postgres / Redis / MinIO |
+| 8 fixtures against the real validator | Postgres / Redis / MinIO |
+| The API boots and serves `/healthz`, `/render`, `/jobs` | The worker against real infra |
 | Spec hash agreement between TypeScript and Python | The live Claude API calls |
 | `scripts/render.mjs` through spec -> narration -> timeline | ffmpeg concatenation |
 
-311 tests total. None of them needs an API key, a GPU, or a model download.
+312 tests total. None of them needs an API key, a GPU, or a model download.
 
 The Claude calls are covered by tests against a scripted fake client, so the
 request shapes (forced tool use, repair transcript, refusal handling) are
@@ -76,6 +91,14 @@ winget install eSpeak-NG.eSpeak-NG   # or: apt-get install espeak-ng
 
 This is the reason the architecture works: it accepts a target duration per
 line, so animation timings are known before audio exists.
+
+> **On a DGX Spark, do not use the `cu124` index below.** GB10 is aarch64 with
+> compute capability 12.1, and the x86-era CUDA 12.4 wheels either do not exist
+> for that architecture or install and then fail at the first kernel launch —
+> `torch.cuda.is_available()` returns `True` either way, so the failure surfaces
+> mid-render rather than at install time. Run `scripts/install-dgx-spark.sh`,
+> which tries `cu130`/`cu129`/`cu128` in order and verifies each by launching a
+> real kernel. The line below is for x86 hosts with a CUDA 12.4 runtime.
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cu124

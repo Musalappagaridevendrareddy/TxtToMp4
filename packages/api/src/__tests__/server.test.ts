@@ -259,6 +259,38 @@ test('GET /healthz is 503 when Postgres or Redis is down', async (t) => {
   assert.equal(res.json().redis, true);
 });
 
+test('GET /healthz answers 503 when a dependency hangs instead of refusing', async (t) => {
+  // The failure this pins: ioredis constructed for BullMQ
+  // (`maxRetriesPerRequest: null`) queues a ping to a dead Redis and retries
+  // forever rather than rejecting, so an unbounded probe leaves /healthz
+  // hanging indefinitely — the one thing a health endpoint must never do.
+  const app = buildServer({
+    db: createFakeDb(),
+    logLevel: 'silent',
+    queue: {
+      async add() {
+        return {};
+      },
+      async getJob() {
+        return undefined;
+      },
+    },
+    healthTimeoutMs: 50,
+    health: {
+      db: async () => {},
+      redis: () => new Promise<void>(() => {}), // never settles
+    },
+  });
+  t.after(() => app.close());
+
+  const res = await app.inject({ method: 'GET', url: '/healthz' });
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.json().postgres, true);
+  assert.equal(res.json().redis, false);
+  assert.match(res.json().detail.redis.error, /did not answer within 50ms/);
+});
+
 test('unexpected errors return a request id and never a stack trace', async (t) => {
   const db = createFakeDb();
   db.findCompletedByQuestion = async () => {

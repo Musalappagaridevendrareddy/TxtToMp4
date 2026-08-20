@@ -26,6 +26,62 @@ export interface ServerDeps {
   health: HealthChecks;
   logLevel?: string;
   corsOrigin?: string;
+  /** Per-dependency ceiling for `/healthz` probes. See `withTimeout`. */
+  healthTimeoutMs?: number;
+}
+
+/** Default ceiling for a single `/healthz` probe. */
+export const HEALTH_TIMEOUT_MS = 2_000;
+
+/**
+ * Render a probe failure as something an operator can act on.
+ *
+ * Node surfaces a failed multi-address connect as an `AggregateError` whose own
+ * `message` is empty, which reduces `/healthz` to `postgres: false` with no
+ * reason attached. Reach into the first sub-error for the real cause.
+ */
+function describeError(err: unknown): string {
+  if (err instanceof AggregateError) {
+    const inner = err.errors.map(describeError).filter(Boolean);
+    if (inner.length > 0) return [...new Set(inner)].join('; ');
+  }
+  if (err instanceof Error) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (err.message) return code ? `${err.message} (${code})` : err.message;
+    if (code) return code;
+    return err.name;
+  }
+  return String(err) || 'unknown error';
+}
+
+/**
+ * Bound a health probe.
+ *
+ * `/healthz` must answer even when a dependency is unreachable — that is the
+ * entire point of it. Neither driver guarantees that on its own: BullMQ
+ * requires ioredis be constructed with `maxRetriesPerRequest: null`, which
+ * makes a `ping()` to a dead Redis sit in the offline queue and retry forever
+ * rather than reject. Without this wrapper the handler awaits that ping
+ * indefinitely and the endpoint hangs instead of reporting the outage it
+ * exists to report.
+ */
+function withTimeout(probe: () => Promise<unknown>, ms: number, label: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} did not answer within ${ms}ms`)), ms);
+    // Never let a pending probe hold the process open at shutdown.
+    timer.unref?.();
+
+    probe().then(
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
 }
 
 const RenderBody = z.object({
@@ -94,7 +150,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     },
     genReqId: (req) => (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
     requestIdHeader: 'x-request-id',
-    disableRequestLogging: false,
   });
 
   app.register(cors, { origin: deps.corsOrigin ?? '*' });
@@ -205,14 +260,15 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   // GET /healthz ---------------------------------------------------------
   app.get('/healthz', async (_req, reply) => {
+    const budget = deps.healthTimeoutMs ?? HEALTH_TIMEOUT_MS;
     const [postgres, redis] = await Promise.all([
-      deps.health.db().then(
+      withTimeout(() => deps.health.db(), budget, 'postgres').then(
         () => ({ ok: true as const }),
-        (e: unknown) => ({ ok: false as const, error: (e as Error).message }),
+        (e: unknown) => ({ ok: false as const, error: describeError(e) }),
       ),
-      deps.health.redis().then(
+      withTimeout(() => deps.health.redis(), budget, 'redis').then(
         () => ({ ok: true as const }),
-        (e: unknown) => ({ ok: false as const, error: (e as Error).message }),
+        (e: unknown) => ({ ok: false as const, error: describeError(e) }),
       ),
     ]);
 
