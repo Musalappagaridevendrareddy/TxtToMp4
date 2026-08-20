@@ -495,7 +495,6 @@ class BaseArchetype:
                   visible_after=len(self._visible))
         )
 
-
     def pad_to(self, duration: float) -> None:
         """Sit on the final frame until the beat's audio is done.
 
@@ -687,6 +686,33 @@ class BaseArchetype:
                 lines[-1] = f"{lines[-1]} {word}"
         return "\n".join(lines)
 
+    def stage(
+        self,
+        composition: Any,
+        *,
+        width_frac: float = 0.86,
+        height_frac: float = 0.78,
+        max_scale: float = 1.5,
+    ) -> Any:
+        """Scale a finished composition to fill the safe area, then centre it.
+
+        Called once, after everything is placed and before anything is revealed.
+        Scaling the whole shot uniformly is the only resizing that preserves the
+        design; per-element fudging is how layouts end up looking assembled.
+        Capped at ``max_scale`` so a two-word beat does not become a billboard.
+
+        Centres on the *safe area*, not the frame: the caption band eats the
+        bottom of the frame, so the optical centre sits ``SAFE_CENTER_Y`` above
+        the origin. Centring on ORIGIN would push every layout into the captions.
+        """
+        target_w = SAFE_WIDTH * width_frac
+        target_h = SAFE_HEIGHT * height_frac
+        factor = min(target_w / composition.width, target_h / composition.height)
+        factor = min(factor, max_scale)
+        if abs(factor - 1.0) > 1e-3:
+            composition.scale(factor)
+        composition.move_to(ORIGIN + UP * SAFE_CENTER_Y)
+        return composition
 
     @staticmethod
     def fit(mobject: Any, *, max_width: float = SAFE_WIDTH, max_height: float = SAFE_HEIGHT) -> Any:

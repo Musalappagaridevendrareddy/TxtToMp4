@@ -1,5 +1,7 @@
 import { Queue, type JobsOptions } from 'bullmq';
-import IORedis, { type Redis } from 'ioredis';
+// ioredis ships CommonJS; under NodeNext its default export is the namespace,
+// not the constructor. The named Redis class is the constructable one.
+import { Redis } from 'ioredis';
 
 /** The one queue. Render jobs are long and serial; there is nothing else to schedule. */
 export const RENDER_QUEUE = 'render';
@@ -25,7 +27,7 @@ export const RENDER_JOB_OPTIONS: JobsOptions = {
  * so both the queue and the worker share this factory.
  */
 export function createRedis(redisUrl: string): Redis {
-  return new IORedis(redisUrl, {
+  return new Redis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   });

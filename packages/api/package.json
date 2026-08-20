@@ -11,7 +11,7 @@
     "worker": "node dist/worker.js",
     "migrate": "node dist/migrate.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test dist/__tests__/"
+    "test": "npm run build && node --test dist/__tests__/*.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.658.1",

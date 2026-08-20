@@ -230,22 +230,27 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   });
 
   // Global error handler: clients get a message, logs get everything -------
-  app.setErrorHandler((error, req, reply) => {
+  app.setErrorHandler((error: unknown, req, reply) => {
+    // Fastify types this as `unknown` in strict mode; narrow once here rather
+    // than casting at each of the six use sites below.
+    const err = error as { statusCode?: unknown; message?: unknown; stack?: unknown };
+    const message = typeof err.message === 'string' ? err.message : 'Request failed';
+
     const status =
       error instanceof HttpError
         ? error.statusCode
-        : typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500
-          ? error.statusCode
+        : typeof err.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 500
+          ? err.statusCode
           : 500;
 
     if (status >= 500) {
-      req.log.error({ err: error, stack: error.stack, reqId: req.id }, 'request failed');
+      req.log.error({ err: error, stack: err.stack, reqId: req.id }, 'request failed');
     } else {
-      req.log.warn({ err: error.message, reqId: req.id }, 'request rejected');
+      req.log.warn({ err: message, reqId: req.id }, 'request rejected');
     }
 
     reply.code(status).send({
-      error: status >= 500 ? 'Internal Server Error' : error.message,
+      error: status >= 500 ? 'Internal Server Error' : message,
       ...(error instanceof HttpError && error.details ? { details: error.details } : {}),
       requestId: String(req.id),
     });
