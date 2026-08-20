@@ -1,0 +1,89 @@
+{
+  "topic": "What is the difference between a process and a thread?",
+  "arc": "compare_contrast",
+  "palette": "cool",
+  "pacing": "deliberate",
+  "totalDurationTarget": 42,
+  "beats": [
+    {
+      "id": "hook",
+      "narration": "A program that is running is a process. Inside it, threads do the actual work.",
+      "durationSeconds": 5.5,
+      "archetype": "containment",
+      "params": {
+        "outer": { "label": "Process" },
+        "inner": [{ "label": "Thread A" }, { "label": "Thread B" }]
+      },
+      "emphasis": ["Inside it"],
+      "emotion": "curious",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "shared-memory",
+      "narration": "The process owns the memory. Every thread inside sees exactly the same memory.",
+      "durationSeconds": 5,
+      "archetype": "containment",
+      "params": {
+        "outer": { "label": "Process memory" },
+        "inner": [{ "label": "Thread A" }, { "label": "Thread B" }]
+      },
+      "emphasis": ["the same memory"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 1.5
+    },
+    {
+      "id": "the-split",
+      "narration": "Two processes share nothing by default. Two threads share everything by default.",
+      "durationSeconds": 5,
+      "archetype": "branch",
+      "params": {
+        "question": { "label": "Share memory?" },
+        "outcomes": [{ "label": "Threads: yes" }, { "label": "Processes: no" }]
+      },
+      "emphasis": ["share nothing"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "the-danger",
+      "narration": "That sharing is the danger. Two threads touching one counter can lose an update.",
+      "durationSeconds": 5.5,
+      "archetype": "parallel_race",
+      "params": {
+        "laneA": { "label": "Thread A", "steps": ["read count", "write count"] },
+        "laneB": { "label": "Thread B", "steps": ["read count", "write count"] },
+        "verdict": "one update is lost"
+      },
+      "emphasis": ["lose an update"],
+      "emotion": "emphatic",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "the-tradeoff",
+      "narration": "Processes pay for safety with isolation. Threads pay for speed with shared risk.",
+      "durationSeconds": 5,
+      "archetype": "transformation",
+      "params": {
+        "before": { "label": "isolation" },
+        "after": { "label": "shared risk" },
+        "via": "the trade you are making"
+      },
+      "emphasis": ["shared risk"],
+      "emotion": "neutral",
+      "holdAfterSeconds": 2
+    },
+    {
+      "id": "payoff",
+      "narration": "So the question is never which is better. It is what you are willing to share.",
+      "durationSeconds": 5.5,
+      "archetype": "containment",
+      "params": {
+        "outer": { "label": "What you share" },
+        "inner": [{ "label": "Nothing: process" }, { "label": "Everything: thread" }]
+      },
+      "emphasis": ["willing to share"],
+      "emotion": "calm",
+      "holdAfterSeconds": 2
+    }
+  ]
+}
