@@ -1,0 +1,13 @@
+
+[align]
+whisperx>=3.1
+
+[dev]
+pytest>=7.4
+
+[indextts2]
+indextts>=0.2
+
+[kokoro]
+kokoro>=0.9
+soundfile>=0.12

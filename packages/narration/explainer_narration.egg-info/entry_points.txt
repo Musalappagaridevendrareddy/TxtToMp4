@@ -1,0 +1,2 @@
+[console_scripts]
+explainer-narrate = narration.synthesize:main

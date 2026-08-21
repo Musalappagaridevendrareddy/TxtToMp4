@@ -83,7 +83,7 @@ export async function critique(
   try {
     message = await client.messages.create({
       model: options.model ?? MODELS.critique,
-      max_tokens: 16000,
+      max_tokens: 2048,
       thinking: { type: 'adaptive' },
       system: critiqueSystemPrompt(),
       tools: [emitSpecTool, verdictTool],

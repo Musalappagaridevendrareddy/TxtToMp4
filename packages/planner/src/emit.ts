@@ -75,7 +75,7 @@ export async function emitSpec(
     try {
       message = await client.messages.create({
         model: options.model ?? MODELS.spec,
-        max_tokens: 16000,
+        max_tokens: 2048,
         thinking: { type: 'adaptive' },
         output_config: { effort: options.effort ?? 'high' },
         system: specSystemPrompt(),

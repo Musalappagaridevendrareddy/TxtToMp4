@@ -34,7 +34,7 @@ export async function plan(question: string, options: PlanOptions = {}): Promise
   try {
     message = await client.messages.create({
       model: options.model ?? MODELS.planner,
-      max_tokens: 16000,
+      max_tokens: 2048,
       thinking: { type: 'adaptive' },
       output_config: { effort: options.effort ?? 'high' },
       messages: [{ role: 'user', content: plannerPrompt(question, options.sources ?? []) }],

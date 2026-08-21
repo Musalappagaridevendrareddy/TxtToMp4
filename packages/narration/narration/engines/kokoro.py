@@ -102,8 +102,11 @@ class KokoroEngine:
             chunks = self._pipeline(text, voice=self.voice)
             samples: list[float] = []
             for chunk in chunks:
-                # KPipeline yields (graphemes, phonemes, audio) triples.
-                audio = chunk[-1] if isinstance(chunk, (tuple, list)) else chunk
+                # KPipeline yields Result objects in newer versions, or (graphemes, phonemes, audio) triples.
+                if hasattr(chunk, "audio"):
+                    audio = chunk.audio
+                else:
+                    audio = chunk[-1] if isinstance(chunk, (tuple, list)) else chunk
                 samples.extend(to_float_samples(audio))
         except TTSError:
             raise

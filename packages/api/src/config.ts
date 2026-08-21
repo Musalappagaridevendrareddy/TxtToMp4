@@ -266,7 +266,7 @@ export function loadConfig(raw: NodeJS.ProcessEnv = process.env): Config {
       presignTtlSeconds: e.S3_PRESIGN_TTL_SECONDS,
     },
     renderWorkDir: resolve(repoRoot, e.RENDER_WORK_DIR),
-    pythonBin: e.PYTHON_BIN,
+    pythonBin: e.PYTHON_BIN.startsWith('.') ? resolve(repoRoot, e.PYTHON_BIN) : e.PYTHON_BIN,
     pythonRoot: resolve(repoRoot, e.PYTHON_ROOT),
     ffmpegBin: e.FFMPEG_BIN,
     maxCritiqueIterations: e.MAX_CRITIQUE_ITERATIONS,

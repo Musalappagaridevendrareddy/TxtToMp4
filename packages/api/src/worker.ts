@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -455,6 +455,7 @@ async function renderOnce(
     ...process.env,
     PYTHONPATH: deps.pythonRoot,
     PYTHONUNBUFFERED: '1',
+    KOKORO_VOICE: deps.kokoroVoice,
   };
 
   // Narration + WhisperX alignment ---------------------------------------
@@ -468,16 +469,10 @@ async function renderOnce(
       specPath,
       '--out',
       iterDir,
-      '--timeline',
-      timelinePath,
       '--engine',
       deps.ttsEngine,
-      '--voice',
-      deps.kokoroVoice,
-      '--whisperx-device',
+      '--device',
       deps.whisperxDevice,
-      '--whisperx-model',
-      deps.whisperxModel,
     ],
     { cwd: deps.pythonRoot, timeoutMs: deps.timeouts.narrationMs, env: pythonEnv },
   );
@@ -492,7 +487,7 @@ async function renderOnce(
 
   // Manim beat renders ----------------------------------------------------
   await ctx.enter('manim', beatsDir);
-  await deps.run(
+  const manimResult = await deps.run(
     deps.pythonBin,
     [
       '-m',
@@ -508,10 +503,23 @@ async function renderOnce(
     { cwd: deps.pythonRoot, timeoutMs: deps.timeouts.manimMs, env: pythonEnv },
   );
 
+  const manimOutput = JSON.parse(manimResult.stdout) as {
+    ok: boolean;
+    error?: string;
+    beats: Array<{ beatId: string; path: string }>;
+  };
+  if (!manimOutput.ok) {
+    throw new Error(`manim_scenes.render_beat failed: ${manimOutput.error}`);
+  }
+
+  for (const beat of manimOutput.beats) {
+    await copyFile(beat.path, join(beatsDir, `${beat.beatId}.webm`));
+  }
+
   // Remotion composite ----------------------------------------------------
   await ctx.enter('remotion', videoPath);
   await withTimeout('remotion', deps.timeouts.remotionMs, () =>
-    deps.compositor.renderExplainer({ specPath, timelinePath, assetsDir: beatsDir, outPath: videoPath }),
+    deps.compositor.renderExplainer({ specPath, timelinePath, assetsDir: iterDir, outPath: videoPath }),
   );
 
   // Keyframes, one per beat, for the critic to look at --------------------

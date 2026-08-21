@@ -1,0 +1,2 @@
+[console_scripts]
+render-beat = manim_scenes.render_beat:main

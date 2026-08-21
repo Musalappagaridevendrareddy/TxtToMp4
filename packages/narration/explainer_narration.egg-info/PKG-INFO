@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: explainer-narration
+Version: 0.1.0
+Summary: Narration synthesis and timeline building for the explainer engine
+License: UNLICENSED
+Requires-Python: >=3.10
+Provides-Extra: kokoro
+Requires-Dist: kokoro>=0.9; extra == "kokoro"
+Requires-Dist: soundfile>=0.12; extra == "kokoro"
+Provides-Extra: indextts2
+Requires-Dist: indextts>=0.2; extra == "indextts2"
+Provides-Extra: align
+Requires-Dist: whisperx>=3.1; extra == "align"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"

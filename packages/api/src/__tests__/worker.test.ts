@@ -62,9 +62,12 @@ async function rig(
 
     if (args.includes('narration.synthesize')) {
       const specPath = args[args.indexOf('--spec') + 1]!;
-      const timelinePath = args[args.indexOf('--timeline') + 1]!;
+      const timelinePath = join(dirname(specPath), 'timeline.json');
       const spec = JSON.parse(await readFile(specPath, 'utf8'));
       await writeFile(timelinePath, JSON.stringify(validTimeline(specHash(spec))), 'utf8');
+    }
+    if (args.includes('manim_scenes.render_beat')) {
+      return { stdout: JSON.stringify({ ok: true, beats: [] }), stderr: '' };
     }
     return { stdout: '', stderr: '' };
   };
@@ -219,7 +222,7 @@ test('a stage failure records the stage that failed and marks the job failed', a
     if (args.includes('manim_scenes.render_beat')) throw new Error('manim: cairo exploded');
     if (args.includes('narration.synthesize')) {
       const specPath = args[args.indexOf('--spec') + 1]!;
-      const timelinePath = args[args.indexOf('--timeline') + 1]!;
+      const timelinePath = join(dirname(specPath), 'timeline.json');
       const spec = JSON.parse(await readFile(specPath, 'utf8'));
       await writeFile(timelinePath, JSON.stringify(validTimeline(specHash(spec))), 'utf8');
     }

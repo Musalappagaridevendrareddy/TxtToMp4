@@ -573,13 +573,14 @@ class BaseArchetype:
     def _assert_single_element(self, mobject: Any) -> None:
         if mobject is None:
             raise LayoutError(f"{self.archetype}: reveal() was given None.")
-        subs = getattr(mobject, "submobjects", None)
-        if subs and len(subs) > 1 and not getattr(mobject, "_explainer_unit", False):
-            raise LayoutError(
-                f"{self.archetype}: reveal() was handed a group of {len(subs)} top-level "
-                f"elements. Rule 1 is one new element at a time — reveal them in "
-                f"separate calls, or compose them into a single element with scene.unit(...)."
-            )
+        if isinstance(mobject, VGroup) and not getattr(mobject, "_explainer_unit", False):
+            subs = getattr(mobject, "submobjects", None)
+            if subs and len(subs) > 1:
+                raise LayoutError(
+                    f"{self.archetype}: reveal() was handed a group of {len(subs)} top-level "
+                    f"elements. Rule 1 is one new element at a time — reveal them in "
+                    f"separate calls, or compose them into a single element with scene.unit(...)."
+                )
 
     # -- construction helpers -----------------------------------------
     def unit(self, *mobjects: Any) -> Any:
